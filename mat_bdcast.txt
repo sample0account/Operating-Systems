@@ -1,0 +1,126 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include "mpi.h"
+#include <time.h>
+
+#define N 4  // Matrix size (N x N)
+
+double matrix_a[N][N], matrix_b[N][N], matrix_c[N][N];
+
+int main(int argc, char **argv) {
+    int processCount, processId, slaveTaskCount, rows;
+    MPI_Status status;
+
+    // Initialize MPI
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &processId);
+    MPI_Comm_size(MPI_COMM_WORLD, &processCount);
+
+    // Number of slave tasks
+    slaveTaskCount = processCount - 1;
+    rows = N / processCount; // Number of rows each process will handle
+
+    double local_a[rows][N];  // Local portion of matrix A
+    double local_c[rows][N];  // Local portion of matrix C
+
+    // Root (Master) process
+    if (processId == 0) {
+        srand(time(NULL));
+
+        // Initialize matrices A and B
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < N; j++) {
+                matrix_a[i][j] = rand() % 10;
+                matrix_b[i][j] = rand() % 10;
+            }
+        }
+
+        // Print Matrix A
+        printf("\nMatrix A:\n");
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < N; j++) {
+                printf("%.0f\t", matrix_a[i][j]);
+            }
+            printf("\n");
+        }
+
+        // Print Matrix B
+        printf("\nMatrix B:\n");
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < N; j++) {
+                printf("%.0f\t", matrix_b[i][j]);
+            }
+            printf("\n");
+        }
+    }
+
+    // Broadcast matrix B to all processes
+    MPI_Bcast(matrix_b, N * N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    // Scatter matrix A among processes
+    MPI_Scatter(matrix_a, rows * N, MPI_DOUBLE, local_a, rows * N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    // Perform matrix multiplication
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < N; j++) {
+            local_c[i][j] = 0.0;
+            for (int k = 0; k < N; k++) {
+                local_c[i][j] += local_a[i][k] * matrix_b[k][j];
+            }
+        }
+    }
+
+    // Gather the result matrix C
+    MPI_Gather(local_c, rows * N, MPI_DOUBLE, matrix_c, rows * N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    // Root process prints the result
+    if (processId == 0) {
+        printf("\nResult Matrix C = A * B:\n");
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < N; j++) {
+                printf("%.0f\t", matrix_c[i][j]);
+            }
+            printf("\n");
+        }
+    }
+
+    MPI_Finalize();
+    return 0;
+}
+
+
+
+
+### **Steps for Parallel Matrix Multiplication using MPI**  
+
+1. **Initialize MPI.**  
+   - Call `MPI_Init` to start MPI execution.  
+
+2. **Get process information.**  
+   - Get the rank (ID) of the current process using `MPI_Comm_rank`.  
+   - Get the total number of processes using `MPI_Comm_size`.  
+
+3. **Calculate workload distribution.**  
+   - Compute the number of rows each process will handle (`rows = N / processCount`).  
+
+4. **Master process (rank 0) initializes matrices.**  
+   - Generate random values for matrices A and B.  
+   - Print matrices A and B.  
+
+5. **Broadcast matrix B to all processes.**  
+   - Use `MPI_Bcast` to send matrix B to all processes.  
+
+6. **Scatter matrix A among processes.**  
+   - Divide matrix A into chunks and send each chunk to different processes using `MPI_Scatter`.  
+
+7. **Each process performs matrix multiplication on its assigned rows.**  
+   - Multiply the received rows of A with the complete matrix B.  
+
+8. **Gather computed rows of matrix C from all processes.**  
+   - Use `MPI_Gather` to collect computed partial results of matrix C from all processes.  
+
+9. **Master process prints the final result.**  
+   - If the process rank is 0, print the final computed matrix C.  
+
+10. **Finalize MPI.**  
+    - Call `MPI_Finalize` to end the MPI execution.  

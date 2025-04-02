@@ -1,0 +1,118 @@
+#include <stdio.h>
+#include <stdbool.h>
+#include <stdlib.h>
+
+#define MAX_PROCESSES 10
+#define MAX_SITES 3
+
+// Structure to hold site information
+typedef struct {
+    int num_processes;
+    int adjacency[MAX_PROCESSES][MAX_PROCESSES];
+} Site;
+
+// Function to perform DFS and detect cycles
+bool detect_cycle_dfs(int graph[MAX_PROCESSES][MAX_PROCESSES], int num_processes, int node, int visited[], int stack[]) {
+    visited[node] = 1;
+    stack[node] = 1;
+
+    for (int i = 0; i < num_processes; i++) {
+        if (graph[node][i]) 	{
+            if (!visited[i] && detect_cycle_dfs(graph, num_processes, i, visited, stack)) {
+                return true;
+            } else if (stack[i]) {
+                return true; // Cycle detected
+            }
+        }
+    }
+
+    stack[node] = 0;
+    return false;
+}
+
+// Wrapper function for cycle detection
+bool detect_deadlock(int graph[MAX_PROCESSES][MAX_PROCESSES], int num_processes) {
+    int visited[MAX_PROCESSES] = {0};
+    int stack[MAX_PROCESSES] = {0};
+
+    for (int i = 0; i < num_processes; i++) {
+        if (!visited[i] && detect_cycle_dfs(graph, num_processes, i, visited, stack)) {
+            return true; // Deadlock detected
+        }
+    }
+
+    return false; // No deadlock
+}
+
+// Function to simulate hierarchical deadlock detection
+void hierarchical_deadlock_detection(Site sites[MAX_SITES], int num_sites) {
+    int global_wfg[MAX_PROCESSES][MAX_PROCESSES] = {0};
+    printf("----- Hierarchical Deadlock Detection -----\n");
+
+    for (int i = 0; i < num_sites; i++) {
+        printf("Checking for deadlocks in Site %d...\n", i);
+        if (detect_deadlock(sites[i].adjacency, sites[i].num_processes)) {
+            printf("Deadlock detected in Site %d! Escalating unresolved graph to global coordinator...\n", i);
+            for (int u = 0; u < sites[i].num_processes; u++) {
+                for (int v = 0; v < sites[i].num_processes; v++) {
+                    if (sites[i].adjacency[u][v]) {
+                        global_wfg[u][v] = 1;
+                    }
+                }
+            }
+        } else {
+            printf("No deadlocks in Site %d.\n", i);
+        }
+    }
+
+    // Global deadlock detection
+    printf("Checking global WFG for system-wide deadlocks...\n");
+    if (detect_deadlock(global_wfg, MAX_PROCESSES)) {
+        printf("System-wide deadlock detected! Taking global resolution actions...\n");
+    } else {
+        printf("No system-wide deadlock detected.\n");
+    }
+}
+
+int main() {
+    Site sites[MAX_SITES];
+    int num_sites;
+
+    printf("Enter the number of sites: ");
+    scanf("%d", &num_sites);
+
+    for (int s = 0; s < num_sites; s++) {
+        printf("Enter the number of processes in Site %d: ", s);
+        scanf("%d", &sites[s].num_processes);
+
+        printf("Enter the adjacency matrix for Site ");
+        for (int u = 0; u < sites[s].num_processes; u++) {
+            for (int v = 0; v < sites[s].num_processes; v++) {
+                scanf("%d", &sites[s].adjacency[u][v]);
+            }
+        }
+    }
+
+    hierarchical_deadlock_detection(sites, num_sites);
+    return 0;
+}
+
+
+### **Step-by-Step Algorithm for Hierarchical Deadlock Detection**  
+
+1. **Define the structure for sites** – Create a `Site` structure to store the number of processes and adjacency matrix.  
+2. **Implement DFS for cycle detection** – Use Depth-First Search (DFS) to traverse the graph and detect cycles.  
+3. **Mark nodes as visited** – Maintain arrays `visited[]` and `stack[]` to track visited nodes during DFS traversal.  
+4. **Check for cycles** – If a node is revisited in the same DFS call stack, a cycle (deadlock) is detected.  
+5. **Implement a wrapper function** – `detect_deadlock()` calls DFS for all processes to check for deadlocks.  
+6. **Initialize the global wait-for graph (WFG)** – Create an empty `global_wfg` to store inter-site dependencies.  
+7. **Iterate through each site** – Loop over each site and perform local deadlock detection.  
+8. **Perform local deadlock detection** – Call `detect_deadlock()` for each site's adjacency matrix.  
+9. **Escalate unresolved dependencies** – If a deadlock is found locally, add site dependencies to `global_wfg`.  
+10. **Display local detection results** – Print whether each site has a deadlock or not.  
+11. **Perform global deadlock detection** – Check for deadlocks in the combined `global_wfg`.  
+12. **Display global deadlock results** – Print if a system-wide deadlock is found or not.  
+13. **Prompt the user for input** – Ask for the number of sites and process details.  
+14. **Input adjacency matrices** – Collect dependency graphs for each site from user input.  
+15. **Call hierarchical detection function** – Execute `hierarchical_deadlock_detection()` with input data.  
+16. **End the program** – Display results and terminate the execution.

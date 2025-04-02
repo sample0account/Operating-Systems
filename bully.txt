@@ -1,0 +1,187 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+#define MAX 20
+int list[MAX], n, cdr;
+
+void display()
+{
+    int i;
+    printf("\nProcesses -->");
+    for (i = 1; i <= n; i++)
+    {
+        printf("\t%d", i);
+    }
+    printf("\nAlive -->");
+    for (i = 1; i <= n; i++)
+    {
+        printf("\t%d", list[i]);
+    }
+    printf("\nCoordinator is :: %d", cdr);
+}
+
+void bully()
+{
+    int ch, crash, activate, i, gid, flag, subcdr;
+
+    while (1)
+    {
+        printf("\n\n1. Crash\n2. Activate\n3. Display\n4. Exit\nEnter Your Choice: ");
+        scanf("%d", &ch);
+
+        switch (ch)
+        {
+        case 1:
+            // Crash a process
+            printf("\nEnter Process no. to Crash: ");
+            scanf("%d", &crash);
+
+            if (list[crash])
+            {
+                list[crash] = 0;
+            }
+            else
+            {
+                printf("\nProcess is already dead!!");
+                break;
+            }
+
+            do
+            {
+                printf("\nEnter election generator ID: ");
+                scanf("%d", &gid);
+                if (gid == cdr || list[gid] == 0)
+                {
+                    printf("\nEnter a valid generator ID (not the coordinator): ");
+                }
+            } while (gid == cdr || list[gid] == 0);
+
+            flag = 0;
+            if (crash == cdr)
+            {
+                for (i = gid + 1; i <= n; i++)
+                {
+                    printf("\nMessage is sent from %d to %d", gid, i);
+                    if (list[i])
+                    {
+                        subcdr = i;
+                        printf("\nResponse is sent from %d to %d", i, gid);
+                        flag = 1;
+                    }
+                }
+                if (flag == 1)
+                {
+                    cdr = subcdr;
+                }
+                else
+                {
+                    cdr = gid;
+                }
+            }
+            display();
+            break;
+
+        case 2:
+            // Activate a process
+            printf("\nEnter Process no. to Activate: ");
+            scanf("%d", &activate);
+
+            if (!list[activate])
+            {
+                list[activate] = 1;
+            }
+            else
+            {
+                printf("\nProcess is already alive!!");
+                break;
+            }
+
+            flag = 0;
+            if (activate == n)
+            {
+                cdr = n;
+            }
+            else
+            {
+                for (i = activate + 1; i <= n; i++)
+                {
+                    printf("\nMessage is sent from %d to %d", activate, i);
+                    if (list[i])
+                    {
+                        subcdr = i;
+                        printf("\nResponse is sent from %d to %d", i, activate);
+                        flag = 1;
+                    }
+                }
+                if (flag == 1)
+                {
+                    cdr = subcdr;
+                }
+                else
+                {
+                    cdr = activate;
+                }
+            }
+            display();
+            break;
+
+        case 3:
+            // Display current state
+            display();
+            break;
+
+        case 4:
+            // Exit the program
+            exit(0);
+
+        default:
+            printf("\nInvalid choice! Please try again.");
+        }
+    }
+}
+
+int main()
+{
+    int i;
+    printf("\nEnter the number of processes: ");
+    scanf("%d", &n);
+
+    for (i = 1; i <= n; i++)
+    {
+        printf("\nEnter Process %d is Alive or not (0/1): ", i);
+        scanf("%d", &list[i]);
+        if (list[i])
+        {
+            cdr = i; // Set the initial coordinator as the last alive process
+        }
+    }
+
+    display();
+    bully();
+
+    return 0;
+}
+
+
+### **Step-by-Step Algorithm for the Bully Election Algorithm**  
+
+1. **Define global variables** – Store process states in `list[MAX]`, number of processes in `n`, and coordinator in `cdr`.  
+2. **Implement `display` function** – Print the list of processes, their status (alive/dead), and the current coordinator.  
+3. **Implement `bully` function** – Provide an interactive menu to crash, activate processes, display status, or exit.  
+4. **Crash a process** – Read the process ID to crash and mark it as dead if it's currently alive.  
+5. **Start election if the coordinator crashes** – Ask for an election initiator process (`gid`).  
+6. **Validate election initiator** – Ensure the initiator is alive and not the coordinator.  
+7. **Send election messages** – The initiator sends messages to all higher processes.  
+8. **Check for responses** – If a higher process responds, it becomes the new coordinator.  
+9. **Update coordinator** – If no higher process responds, the initiator becomes the new coordinator.  
+10. **Display updated state** – Show the new list of processes and the elected coordinator.  
+11. **Activate a process** – Read the process ID to activate and mark it as alive if it was dead.  
+12. **Start an election if a process is activated** – The activated process checks for higher processes.  
+13. **Send activation messages** – The activated process sends messages to higher processes.  
+14. **Check for responses** – If a higher process responds, it remains the coordinator; otherwise, the activated process becomes the coordinator.  
+15. **Display updated state after activation** – Show the new process list and coordinator.  
+16. **Display option** – Allow users to view the current system state at any time.  
+17. **Exit option** – Provide an option to terminate the program.  
+18. **Implement `main` function** – Read the number of processes from the user.  
+19. **Initialize process states** – Ask if each process is alive or dead and set the initial coordinator as the highest alive process.  
+20. **Call `display` and `bully` functions** – Show the initial state and start the interactive election handling.

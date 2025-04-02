@@ -1,0 +1,64 @@
+#include <stdio.h>
+#include <mpi.h>
+
+int main(int argc, char* argv[]) {
+    int rank, size, i, n;
+    double pi = 0.0, local_sum = 0.0, h, x;
+
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    if (rank == 0) {
+        n = 10000;
+        for (i = 1; i < size; i++) {
+            MPI_Send(&n, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+        }
+    } else {
+        MPI_Recv(&n, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    }
+
+    h = 1.0 / (double)n;
+    for (i = rank + 1; i <= n; i += size) {
+        x = h * ((double)i - 0.5);
+        local_sum += 4.0 / (1.0 + x*x);
+    }
+
+    local_sum *= h;
+    MPI_Reduce(&local_sum, &pi, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+
+    if (rank == 0) printf("Estimated Pi = %.16f\n", pi);
+
+    MPI_Finalize();
+    return 0;
+}
+
+
+
+## **Algorithm for Parallel Pi Estimation using MPI**
+
+### **1. Initialization**
+1. Start MPI using `MPI_Init()`.  
+2. Get process rank (`rank`) and total number of processes (`size`).  
+
+### **2. Master Process (Rank 0)**
+3. Set `n = 10000` (number of intervals).  
+4. Send `n` to all other processes using `MPI_Send()`.  
+
+### **3. Other Processes**
+5. Receive `n` from rank 0 using `MPI_Recv()`.  
+
+### **4. Parallel Computation**
+6. Compute interval width: `h = 1.0 / n`.  
+7. Each process computes its portion of the sum in a loop:
+   - Start at `i = rank + 1`, increment by `size`.  
+   - Compute `x = h * (i - 0.5)`.  
+   - Accumulate `local_sum += 4.0 / (1.0 + x*x)`.  
+   - Multiply final sum by `h`.  
+
+### **5. Gather and Reduce Results**
+8. Use `MPI_Reduce()` to sum all `local_sum` values into `pi` at rank 0.  
+
+### **6. Output and Finalization**
+9. If `rank == 0`, print the estimated value of Pi.  
+10. Call `MPI_Finalize()` to end MPI execution.  

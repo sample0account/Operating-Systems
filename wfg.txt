@@ -1,0 +1,103 @@
+#include <stdio.h>
+#include <stdbool.h>
+
+#define MAX_PROCESSES 10
+#define MAX_SITES 5
+
+typedef struct {
+    int numProcesses;
+    int waitFor[MAX_PROCESSES + 1][MAX_PROCESSES + 1]; // Includes Pex
+} Site;
+
+Site sites[MAX_SITES];
+int numSites;
+
+bool detectCycle(int siteId, int node, bool visited[], bool stack[], int pexIndex) {
+    visited[node] = true;
+    stack[node] = true;
+
+    for (int next = 0; next <= pexIndex; next++) {
+        if (sites[siteId].waitFor[node][next]) {
+            if (!visited[next]) {
+                if (detectCycle(siteId, next, visited, stack, pexIndex)) return true;
+            } else if (stack[next]) {
+                return true;
+            }
+        }
+    }
+
+    stack[node] = false;
+    return false;
+}
+void checkDeadlock(int siteId) {
+    int pexIndex = sites[siteId].numProcesses; // Pex is always the last index
+    bool visited[MAX_PROCESSES + 1] = {false};
+    bool stack[MAX_PROCESSES + 1] = {false};
+    bool hasDistributedDeadlock = false;
+    bool hasLocalDeadlock = false;  // Track if any deadlock is found
+
+    for (int i = 0; i <= pexIndex; i++) {
+        if (!visited[i]) {
+            if (detectCycle(siteId, i, visited, stack, pexIndex)) {
+                if (stack[pexIndex]) {  // Pex is part of the cycle
+                    printf("Distributed deadlock detected at Site %d involving Pex!\n", siteId);
+                    hasDistributedDeadlock = true;
+                } else {
+                    printf("Local deadlock detected at Site %d!\n", siteId);
+                    hasLocalDeadlock = true;
+                }
+            }
+        }
+    }
+
+    if (hasDistributedDeadlock) {
+        printf("Site %d initiates distributed deadlock resolution.\n", siteId);
+    }
+
+    // If no deadlock was found, print the message
+    if (!hasDistributedDeadlock && !hasLocalDeadlock) {
+        printf("No deadlock detected at Site %d.\n", siteId);
+    }
+}
+
+int main() {
+    printf("Enter the number of sites: ");
+    scanf("%d", &numSites);
+
+    for (int s = 0; s < numSites; s++) {
+        printf("Enter the number of processes at Site %d: ", s);
+        scanf("%d", &sites[s].numProcesses);
+
+        printf("Enter the Wait-For Graph adjacency matrix (including Pex as last row/col):\n");
+        for (int i = 0; i <= sites[s].numProcesses; i++) {
+            for (int j = 0; j <= sites[s].numProcesses; j++) {
+                scanf("%d", &sites[s].waitFor[i][j]);
+            }
+        }
+    }
+
+    for (int s = 0; s < numSites; s++) {
+        checkDeadlock(s);
+    }
+
+    return 0;
+}
+
+### **Step-by-Step Algorithm for Distributed and Local Deadlock Detection**  
+
+1. **Define the Site structure** – Store the number of processes and the wait-for graph (WFG) including `Pex`.  
+2. **Initialize global variables** – Declare `sites[MAX_SITES]` to store site data and `numSites` for site count.  
+3. **Implement cycle detection using DFS** – Traverse the graph using Depth-First Search (DFS) to detect cycles.  
+4. **Mark nodes as visited** – Maintain `visited[]` and `stack[]` arrays to track DFS traversal.  
+5. **Check for cycle formation** – If a node is revisited in the same DFS call stack, a cycle (deadlock) exists.  
+6. **Detect local and distributed deadlocks** – If a cycle includes `Pex`, it's a distributed deadlock; otherwise, it's local.  
+7. **Initialize deadlock detection flags** – Use `hasDistributedDeadlock` and `hasLocalDeadlock` to track deadlocks.  
+8. **Iterate through all processes including `Pex`** – Perform cycle detection on each process in the site.  
+9. **Print deadlock detection results** – Display messages for local or distributed deadlocks.  
+10. **Trigger resolution for distributed deadlocks** – If `Pex` is in a cycle, print a message about resolution.  
+11. **Handle the case with no deadlocks** – If no cycle is detected, print that no deadlock was found.  
+12. **Prompt user input for the number of sites** – Read `numSites` from the user.  
+13. **Input process count per site** – Ask the user for the number of processes at each site.  
+14. **Input the wait-for graph (WFG) matrix** – Read the adjacency matrix including `Pex`.  
+15. **Iterate through each site and detect deadlocks** – Call `checkDeadlock()` for each site.  
+16. **End the program** – Print the results and terminate execution.

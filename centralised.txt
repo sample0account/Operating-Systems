@@ -1,0 +1,139 @@
+#include <stdio.h>
+#include <stdbool.h>
+
+#define MAX_SITES 10
+#define MAX_PROCESSES 10
+
+
+typedef struct {
+    int numProcesses;
+    int adjacency[MAX_PROCESSES][MAX_PROCESSES];
+} Site;
+
+Site sites[MAX_SITES]; // Array of sites
+int global[MAX_PROCESSES][MAX_PROCESSES]; // Global adjacency matrix
+int numSites;
+
+/**
+ * Displays the adjacency matrix
+ */
+void displayMatrix(int graph[MAX_PROCESSES][MAX_PROCESSES], int n) {
+    printf("Adjacency Matrix:\n");
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            printf("%d ", graph[i][j]);
+        }
+        printf("\n");
+    }
+}
+
+/**
+ * Combines the adjacency matrices of all sites
+ */
+void combineGraphs(int totalProcesses) {
+    // Initialize global matrix with 0s
+    for (int i = 0; i < totalProcesses; i++) {
+        for (int j = 0; j < totalProcesses; j++) {
+            global[i][j] = 0;
+        }
+    }
+
+    // Merge all site adjacency matrices
+    for (int s = 0; s < numSites; s++) {
+        for (int i = 0; i < sites[s].numProcesses; i++) {
+            for (int j = 0; j < sites[s].numProcesses; j++) {
+                global[i][j] |= sites[s].adjacency[i][j];
+            }
+        }
+    }
+}
+
+/**
+ * DFS function to detect cycles
+ */
+bool dfs(int node, bool visited[], bool stack[], int n) {
+    visited[node] = true;
+    stack[node] = true;
+
+    for (int next = 0; next < n; next++) {
+        if (global[node][next]) {
+            if (!visited[next] && dfs(next, visited, stack, n)) {
+                return true;
+            } else if (stack[next]) {
+                return true; // Cycle detected
+            }
+        }
+    }
+
+    stack[node] = false;
+    return false;
+}
+
+/**
+ * Detects cycles in the combined adjacency matrix
+ */
+bool detectDeadlock(int totalProcesses) {
+    bool visited[MAX_PROCESSES] = {false};
+    bool stack[MAX_PROCESSES] = {false};
+
+    for (int i = 0; i < totalProcesses; i++) {
+        if (!visited[i] && dfs(i, visited, stack, totalProcesses)) {
+            return true; // Deadlock detected
+        }
+    }
+    return false;
+}
+
+int main() {
+    printf("Enter the number of sites: ");
+    scanf("%d", &numSites);
+    int totalProcesses = 0;
+    int numProcess;
+    for (int s = 0; s < numSites; s++) {
+        printf("Enter the number of processes in Site %d: ", s + 1);
+        scanf("%d", &sites[s].numProcesses);
+        numProcess=sites[s].numProcesses;
+        totalProcesses += sites[s].numProcesses;
+
+        printf("Enter adjacency matrix for Site");
+        for (int i = 0; i < sites[s].numProcesses; i++) {
+            for (int j = 0; j < sites[s].numProcesses; j++) {
+                scanf("%d", &sites[s].adjacency[i][j]);
+            }
+        }
+    }
+
+    // Combine the adjacency matrices
+    combineGraphs(totalProcesses);
+
+    printf("\nGlobal Adjacency Matrix (Combined):\n");
+    displayMatrix(global, numProcess);
+
+    // Check for deadlock
+    if (detectDeadlock(totalProcesses)) {
+        printf("\nDeadlock detected in the distributed system.\n");
+    } else {
+        printf("\nNo deadlock detected.\n");
+    }
+
+    return 0;
+}
+
+
+### **Algorithm for Deadlock Detection in a Distributed System**  
+
+1. **Input the number of sites** – Prompt the user to enter the number of sites in the system.  
+2. **Initialize total processes** – Set `totalProcesses` to zero to keep track of all processes across sites.  
+3. **Iterate through each site** – Loop through each site to collect process and adjacency matrix data.  
+4. **Input the number of processes per site** – Read the number of processes for the current site.  
+5. **Update total processes count** – Add the number of processes from the current site to `totalProcesses`.  
+6. **Input adjacency matrix for the site** – Read the local adjacency matrix representing dependencies.  
+7. **Initialize global adjacency matrix** – Set all values in the `global` matrix to zero.  
+8. **Combine local adjacency matrices** – Merge all site matrices into a single `global` matrix.  
+9. **Display the global adjacency matrix** – Print the combined matrix for verification.  
+10. **Initialize visited and recursion stack arrays** – Set `visited` and `stack` arrays to `false` for all processes.  
+11. **Perform DFS for cycle detection** – Traverse the graph using Depth-First Search (DFS) to check for cycles.  
+12. **Check if a cycle is found** – If a cycle is detected, a deadlock is present.  
+13. **Output deadlock status** – Print whether a deadlock was detected or not.  
+14. **End the program** – Exit the program after displaying the result.
+

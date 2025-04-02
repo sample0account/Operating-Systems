@@ -1,0 +1,98 @@
+#include <stdio.h>
+#include <stdbool.h>
+
+#define MAX_PROCESSES 10
+#define MAX_SITES 5
+
+typedef struct {
+    int numProcesses;
+    bool waitFor[MAX_PROCESSES][MAX_PROCESSES]; 
+} Site;
+
+typedef struct {
+    int initiator;
+    int sender;
+    int receiver;
+} Probe;
+
+Site sites[MAX_SITES];
+int numSites;
+
+bool processProbe(int siteId, Probe probe) {
+    if (probe.initiator == probe.receiver) {
+        printf("Deadlock detected at Site %d! Initiator %d receives its own probe.\n", siteId, probe.initiator);
+        return true;
+    }
+
+    for (int next = 0; next < sites[siteId].numProcesses; next++) {
+        if (sites[siteId].waitFor[probe.receiver][next]) {
+            Probe newProbe = {probe.initiator, probe.receiver, next};
+            if (processProbe(siteId, newProbe)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+void checkDeadlock(int siteId) {
+    for (int i = 0; i < sites[siteId].numProcesses; i++) {
+        for (int j = 0; j < sites[siteId].numProcesses; j++) {
+            if (sites[siteId].waitFor[i][j]) {
+                Probe probe = {i, i, j};
+                if (processProbe(siteId, probe)) {
+                    printf("Deadlock resolution initiated at Site %d.\n", siteId);
+                    return;
+                }
+            }
+        }
+    }
+    printf("No deadlock detected at Site %d.\n", siteId);
+}
+
+int main() {
+    printf("Enter the number of sites: ");
+    scanf("%d", &numSites);
+
+    for (int s = 0; s < numSites; s++) {
+        printf("Enter the number of processes at Site %d: ", s);
+        scanf("%d", &sites[s].numProcesses);
+
+        printf("Enter the Wait-For Graph adjacency matrix:\n");
+        for (int i = 0; i < sites[s].numProcesses; i++) {
+            for (int j = 0; j < sites[s].numProcesses; j++) {
+                scanf("%d", &sites[s].waitFor[i][j]);
+            }
+        }
+    }
+
+    for (int s = 0; s < numSites; s++) {
+        checkDeadlock(s);
+    }
+
+    return 0;
+}
+
+
+### **Step-by-Step Algorithm for Distributed Deadlock Detection using Probe Messages**  
+
+1. **Define the `Site` structure** – Store the number of processes and the wait-for graph (WFG) as a boolean adjacency matrix.  
+2. **Define the `Probe` structure** – Store the initiator, sender, and receiver of a probe message.  
+3. **Initialize global variables** – Declare `sites[MAX_SITES]` to store site data and `numSites` for site count.  
+4. **Implement `processProbe` function** – Recursively checks for deadlocks using probes.  
+5. **Base case for deadlock detection** – If the `initiator` process receives its own probe, a deadlock is detected.  
+6. **Check for processes waiting on the receiver** – Iterate through all processes that the receiver is waiting for.  
+7. **Generate a new probe message** – Create a new `Probe` struct and call `processProbe` recursively.  
+8. **Return true if a deadlock is detected** – If any recursive call finds a deadlock, propagate the result.  
+9. **Implement `checkDeadlock` function** – Initiates probe messages from each process waiting for another.  
+10. **Iterate through all process pairs in a site** – Check if process `i` is waiting for `j`.  
+11. **Send a probe message for each dependency** – Call `processProbe` with `{i, i, j}` to check for cycles.  
+12. **Print deadlock detection results** – Display messages when a deadlock is detected.  
+13. **Trigger resolution for detected deadlocks** – Print a message when a site initiates deadlock resolution.  
+14. **Print no deadlock message when necessary** – If no cycle is found, print that no deadlock was detected.  
+15. **Prompt user input for the number of sites** – Read `numSites` from the user.  
+16. **Input process count per site** – Ask the user for the number of processes at each site.  
+17. **Input the wait-for graph (WFG) matrix** – Read the adjacency matrix from the user.  
+18. **Iterate through each site and detect deadlocks** – Call `checkDeadlock()` for each site.  
+19. **End the program** – Print results and terminate execution.

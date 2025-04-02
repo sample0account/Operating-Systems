@@ -1,0 +1,67 @@
+#include <stdio.h>
+#include <mpi.h>
+
+int main(int argc, char* argv[]) {
+    int rank, size, i, n;
+    double pi, sum = 0.0, h, x;
+
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    if (rank == 0) {
+        n = 10000; // Number of intervals
+    }
+
+    MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+    h = 1.0 / (double)n;
+    for (i = rank + 1; i <= n; i += size) {
+        x = h * ((double)i - 0.5);
+        sum += 4.0 / (1.0 + x*x);
+    }
+    sum *= h;
+
+    MPI_Reduce(&sum, &pi, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+
+    if (rank == 0) {
+        printf("Estimated Pi = %.16f\n", pi);
+    }
+
+    MPI_Finalize();
+    return 0;
+}
+
+
+Algorithm for Parallel Pi Estimation using MPI
+
+1. Initialization
+Start MPI using MPI_Init().
+
+Get the rank (rank) and total number of processes (size).
+
+2. Master Process (Rank 0)
+Set n = 10000 (number of intervals).
+
+Broadcast n to all processes using MPI_Bcast().
+
+3. Parallel Computation
+Compute interval width: h = 1.0 / n.
+
+Each process calculates its portion of the sum in a loop:
+
+Start at i = rank + 1, increment by size.
+
+Compute x = h * (i - 0.5).
+
+Accumulate sum += 4.0 / (1.0 + x*x).
+
+Multiply final sum by h.
+
+4. Gather and Reduce Results
+Use MPI_Reduce() to sum all local results into pi at rank 0.
+
+5. Output and Finalization
+If rank == 0, print the estimated value of Pi.
+
+Call MPI_Finalize() to end MPI execution.
